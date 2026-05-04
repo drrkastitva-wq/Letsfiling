@@ -1,53 +1,32 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
-  # Which nixpkgs channel to use.
-  channel = "stable-24.11"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
+  channel = "stable-24.11";
+
   packages = [
-    # pkgs.go
-    # pkgs.python311
-    # pkgs.python311Packages.pip
-    # pkgs.nodejs_22
-    # pkgs.nodePackages.nodemon
+    pkgs.python3
+    pkgs.python3Packages.pip
+    pkgs.nodejs_22
+    pkgs.awscli2
   ];
-  # Sets environment variables in the workspace
-  env = {};
+
+  env = {
+    PYTHONPATH = "/home/user/letsfilling/Letsfiling/backend/vendor";
+  };
+
   idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [
-      # "vscodevim.vim"
+      "ms-python.python"
+      "dbaeumer.vscode-eslint"
       "google.gemini-cli-vscode-ide-companion"
     ];
-    # Enable previews
-    previews = {
-      enable = true;
-      previews = {
-        # web = {
-        #   # Example: run "npm run dev" with PORT set to IDX's defined port for previews,
-        #   # and show it in IDX's web preview panel
-        #   command = ["npm" "run" "dev"];
-        #   manager = "web";
-        #   env = {
-        #     # Environment variables to set for your server
-        #     PORT = "$PORT";
-        #   };
-        # };
-      };
-    };
-    # Workspace lifecycle hooks
+
     workspace = {
-      # Runs when a workspace is first created
       onCreate = {
-        # Example: install JS dependencies from NPM
-        # npm-install = "npm install";
-        # Open editors for the following files by default, if they exist:
-        default.openFiles = [ ".idx/dev.nix" "README.md" ];
+        install-backend-deps = "pip install -r Letsfiling/backend/requirements.txt --target Letsfiling/backend/vendor";
+        install-frontend-deps = "npm install --prefix Letsfiling/frontend";
+        copy-env = "cp Letsfiling/backend/.env.example Letsfiling/backend/.env";
       };
-      # Runs when the workspace is (re)started
       onStart = {
-        # Example: start a background task to watch and re-build backend code
-        # watch-backend = "npm run watch-backend";
+        start-backend = "cd Letsfiling/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload";
       };
     };
   };

@@ -1,0 +1,70 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-check:
+    name: Backend Syntax & Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Letsfiling/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: Letsfiling/backend/requirements.txt
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Syntax check all Python files
+        run: |
+          find app -name "*.py" | xargs python -m py_compile
+          echo "✅ All Python files OK"
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          SECRET_KEY: ci-test-secret
+          AWS_REGION: ap-south-1
+          SES_SENDER_EMAIL: noreply@letsfiling.com
+          S3_BUCKET: letsfiling-documents
+          OTP_EXPIRE_MINUTES: '10'
+        run: python -m unittest discover tests/ -v
+
+  frontend-check:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Letsfiling/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Letsfiling/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build check
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://ijxuemyxtd.execute-api.ap-south-1.amazonaws.com/prod
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Check bundle size
+        run: |
+          SIZE=$(du -sk dist | cut -f1)
+          echo "Bundle size: ${SIZE}KB"
+          [ "$SIZE" -lt 5000 ] && echo "✅ Bundle size OK" || echo "⚠️ Bundle is large: ${SIZE}KB"

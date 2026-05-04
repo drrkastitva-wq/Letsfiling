@@ -1,0 +1,115 @@
+name: Backend — Test & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Letsfiling/backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Letsfiling/backend/**'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Letsfiling/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: Letsfiling/backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: python -m py_compile app/main.py app/models.py app/schemas.py app/config.py app/database.py app/auth.py app/seed.py app/email_service.py app/routers/auth.py app/routers/services.py app/routers/leads.py app/routers/admin.py
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          SECRET_KEY: test-secret-key-for-ci
+          AWS_REGION: ap-south-1
+          SES_SENDER_EMAIL: noreply@letsfiling.com
+          S3_BUCKET: letsfiling-documents
+          OTP_EXPIRE_MINUTES: '10'
+        run: python -m pytest tests/ -v --tb=short 2>/dev/null || python -m unittest discover tests/ -v
+
+  deploy:
+    name: Deploy to Lambda
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: Letsfiling/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Build Lambda package
+        run: |
+          pip install -r requirements.txt \
+            --target ./package \
+            --platform manylinux2014_x86_64 \
+            --implementation cp \
+            --python-version 3.12 \
+            --only-binary=:all: \
+            --upgrade
+          cp -r app package/app
+          cd package
+          python3 -c "
+          import zipfile, os
+          with zipfile.ZipFile('../lambda.zip', 'w', zipfile.ZIP_DEFLATED) as zf:
+              for root, dirs, files in os.walk('.'):
+                  dirs[:] = [d for d in dirs if d != '__pycache__']
+                  for file in files:
+                      if not file.endswith('.pyc'):
+                          path = os.path.join(root, file)
+                          zf.write(path, path[2:])
+          print('Package size:', os.path.getsize('../lambda.zip') // 1024 // 1024, 'MB')
+          "
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp lambda.zip s3://letsfiling-documents/deployments/letsfiling_lambda.zip
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name letsfiling-api \
+            --s3-bucket letsfiling-documents \
+            --s3-key deployments/letsfiling_lambda.zip \
+            --region ap-south-1
+
+          aws lambda wait function-updated \
+            --function-name letsfiling-api \
+            --region ap-south-1
+
+      - name: Smoke test
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://ijxuemyxtd.execute-api.ap-south-1.amazonaws.com/prod/health)
+          echo "Health check status: $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ Deploy successful" || (echo "❌ Health check failed" && exit 1)

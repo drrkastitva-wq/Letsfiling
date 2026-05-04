@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+.env
+Letsfiling/backend/vendor/
+Letsfiling/backend/package/
+Letsfiling/backend/lambda.zip
+
+# Node
+node_modules/
+Letsfiling/frontend/dist/
+
+# Expo
+.expo/
