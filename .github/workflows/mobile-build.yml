@@ -1,0 +1,83 @@
+name: Mobile — Build APK & iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Letsfiling/frontend/**'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Letsfiling/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Letsfiling/frontend/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Expo & EAS CLI
+        run: npm install -g eas-cli expo-cli
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS
+        run: |
+          echo "${{ secrets.EXPO_TOKEN }}" | eas login --token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_BASE_URL: https://api.letslegal.in
+
+  build-ios:
+    name: Build iOS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Letsfiling/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Letsfiling/frontend/package-lock.json
+
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS
+        run: |
+          echo "${{ secrets.EXPO_TOKEN }}" | eas login --token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS (simulator)
+        run: eas build --platform ios --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_BASE_URL: https://api.letslegal.in

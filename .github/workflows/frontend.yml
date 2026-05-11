@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Letsfiling/frontend/**'
+      - 'Letslegal/frontend/**'
       - '.github/workflows/frontend.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'Letsfiling/frontend/**'
+      - 'Letslegal/frontend/**'
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Letsfiling/frontend
+        working-directory: Letslegal/frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: Letsfiling/frontend/package-lock.json
+          cache-dependency-path: Letslegal/frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-dist
-          path: Letsfiling/frontend/dist
+          path: Letslegal/frontend/dist
           retention-days: 7
 
   deploy:
@@ -65,7 +65,7 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync dist s3://letsfiling-web \
+          aws s3 sync dist s3://letslegal-web \
             --acl public-read \
             --delete \
             --cache-control "public, max-age=31536000" \
@@ -73,7 +73,7 @@ jobs:
             --exclude "metadata.json"
 
           # index.html should not be cached
-          aws s3 cp dist/index.html s3://letsfiling-web/index.html \
+          aws s3 cp dist/index.html s3://letslegal-web/index.html \
             --acl public-read \
             --cache-control "no-cache, no-store, must-revalidate"
 

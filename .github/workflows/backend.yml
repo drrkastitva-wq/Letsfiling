@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Letsfiling/backend/**'
+      - 'Letslegal/backend/**'
       - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'Letsfiling/backend/**'
+      - 'Letslegal/backend/**'
 
 jobs:
   test:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Letsfiling/backend
+        working-directory: Letslegal/backend
 
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: Letsfiling/backend/requirements.txt
+          cache-dependency-path: Letslegal/backend/requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -39,8 +39,8 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           SECRET_KEY: test-secret-key-for-ci
           AWS_REGION: ap-south-1
-          SES_SENDER_EMAIL: noreply@letsfiling.com
-          S3_BUCKET: letsfiling-documents
+          SES_SENDER_EMAIL: noreply@letslegal.com
+          S3_BUCKET: letslegal-documents
           OTP_EXPIRE_MINUTES: '10'
         run: python -m pytest tests/ -v --tb=short 2>/dev/null || python -m unittest discover tests/ -v
 
@@ -51,7 +51,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     defaults:
       run:
-        working-directory: Letsfiling/backend
+        working-directory: Letslegal/backend
 
     steps:
       - uses: actions/checkout@v4
@@ -92,18 +92,18 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 cp lambda.zip s3://letsfiling-documents/deployments/letsfiling_lambda.zip
+          aws s3 cp lambda.zip s3://letslegal-documents/deployments/letslegal_lambda.zip
 
       - name: Deploy to Lambda
         run: |
           aws lambda update-function-code \
-            --function-name letsfiling-api \
-            --s3-bucket letsfiling-documents \
-            --s3-key deployments/letsfiling_lambda.zip \
+            --function-name letslegal-api \
+            --s3-bucket letslegal-documents \
+            --s3-key deployments/letslegal_lambda.zip \
             --region ap-south-1
 
           aws lambda wait function-updated \
-            --function-name letsfiling-api \
+            --function-name letslegal-api \
             --region ap-south-1
 
       - name: Smoke test

@@ -9,7 +9,7 @@
   ];
 
   env = {
-    PYTHONPATH = "/home/user/letsfilling/Letsfiling/backend/vendor";
+    PYTHONPATH = "/home/user/letsfilling/Letslegal/backend/vendor";
   };
 
   idx = {
@@ -21,12 +21,12 @@
 
     workspace = {
       onCreate = {
-        install-backend-deps = "pip install -r Letsfiling/backend/requirements.txt --target Letsfiling/backend/vendor";
-        install-frontend-deps = "npm install --prefix Letsfiling/frontend";
-        copy-env = "cp Letsfiling/backend/.env.example Letsfiling/backend/.env";
+        install-backend-deps = "pip install -r Letslegal/backend/requirements.txt --target Letslegal/backend/vendor";
+        install-frontend-deps = "npm install --prefix Letslegal/frontend";
+        copy-env = "cp Letslegal/backend/.env.example Letslegal/backend/.env";
       };
       onStart = {
-        start-backend = "cd Letsfiling/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload";
+        start-backend = "cd Letslegal/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload";
       };
     };
   };
